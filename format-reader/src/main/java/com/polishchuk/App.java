@@ -6,6 +6,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import org.xml.sax.SAXException;
 
+import com.polishchuk.entity.Car;
 import com.polishchuk.model.TypeReference;
 import com.polishchuk.parser.XmlDataFormatParser;
 
@@ -14,10 +15,10 @@ public class App {
 	public static void main(String[] args) throws ParserConfigurationException, SAXException, IOException, ParseException {
 
 //		DataFormat<Data> parser = new DataFormat<>();
-		DataFormat<String> parser = new DataFormat<>();
-		String data = parser.parse("sample.xml"
-				, new TypeReference<String>() {}
-				, new XmlDataFormatParser<>());
+		DataFormat<Car> parser = new DataFormat<>();
+		Car data = parser.parse("sample.xml"
+				, new TypeReference<Car>() {}
+				, new XmlDataFormatParser());
 	
 		System.out.println(data);
 		

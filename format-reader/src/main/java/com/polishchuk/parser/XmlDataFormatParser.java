@@ -9,17 +9,15 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
 import com.polishchuk.ParseException;
 import com.polishchuk.entity.Car;
-import com.polishchuk.entity.Data;
 import com.polishchuk.model.DataFormatModel;
 
-public class XmlDataFormatParser<T> implements Parser<T> {
+public class XmlDataFormatParser<T> implements Parser {
 	
 	private DocumentBuilder builder;
 	private String rootElementName = "root";
@@ -58,65 +56,65 @@ public class XmlDataFormatParser<T> implements Parser<T> {
         // for XML there would be always root node
         model.name = root.getNodeName();
         
+        
         return parse(root, model);
 	}
 	
-	private <V> V parse(Node node, DataFormatModel model) throws ParseException {  
-		if(nodeExists(node, model.name)) {
-			return null;
-		}
+	private T parse(Node node, DataFormatModel model) throws ParseException {  
+		T data;
 		
-		V data;
+		if(model.isSimpleType()) {
+			String content = getTextContent(node);
+			System.out.println(String.format("+ found entry: <%s> value: %s", model.name, content));
+			
+			try {
+				data = castContent(model.createInstance(), content);
+			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
+					| InvocationTargetException e) {
+				throw new ParseException("Unable to create instance for simple type " + model);
+			}    		
+    		return data;
+    	}
 		
+		// if Class
 		try {
 			data = model.createInstance();
 		} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-				| InvocationTargetException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+				| InvocationTargetException e) {
+			throw new ParseException("Unable to initialize instance " + model , e);
 		}
 		
-		NodeList nodeList = node.getChildNodes();	
-		
-		if(model.isSimpleType()) {
-			final Node subNode = findNode(model.name, nodeList);
-			if(node == null) return null;
-			
-    		final String nodeContent = getTextContent(node);
-    		System.out.println(String.format("+ found entry: <%s> value: %s", model.name, nodeContent));
-    		
-    		try {
-				V template = model.<V>createInstance();
-				data = castValue(template, nodeContent);
-			} catch (InstantiationException | IllegalAccessException | IllegalArgumentException
-					| InvocationTargetException e) {
-				throw new ParseException("Failed to initialize instance", e);
-			}
-    		
-    	}
-		
+		NodeList nodeList = node.getChildNodes();			
         System.out.println("Iterating over model " + model);                
         for(DataFormatModel subModel : model.getEntityModel()) {
-        	System.out.println(String.format("model entity %s %s", subModel, subModel.isInlineCollection ? "inline" : ""));
+//        	System.out.println(String.format("model entity %s %s", subModel, subModel.isInlineCollection ? "inline" : ""));
 
-    		final Node dubNode = findNode(subModel.name, nodeList);
+    		final Node subNode = findNode(subModel.name, nodeList);
     		
-    		if(node != null) {
-    			
-    			//description
-    	        V obj = null;
+    		if(subNode != null) {
     	        
     			if(subModel.isCollection()) {
             		
     				System.out.println(String.format("+ found collection <%s>", subModel.name));
     			} else {
-    				
-    				System.out.println(String.format("+ found node <%s>", subModel.name));	
+//    				System.out.println(String.format("+ found node <%s>", subModel.name));
+    				setField(data, model, subModel, parse(subNode, subModel));
     			}     	
     		}
         }
         
-        return null;        
+        return data;        
+	}
+
+	private <V,R> void setField(V instance, DataFormatModel parent, DataFormatModel field, R value) {
+		String setterName = "set" + field.name;
+		System.out.println(String.format("Setting value with setter %s", setterName));
+		try {
+			parent.setValue(instance, setterName, field, value);
+		} catch (NoSuchMethodException | SecurityException | IllegalAccessException | IllegalArgumentException
+				| InvocationTargetException e) {
+			throw new ParseException("Unable to set value" + field  + " for " + parent);
+		}
 	}
 
 	private boolean nodeExists(Node node, String name) {
@@ -125,13 +123,13 @@ public class XmlDataFormatParser<T> implements Parser<T> {
 	}
 
 	@SuppressWarnings("unchecked")
-	private <V> V castValue(V obj, String nodeContent) {
+	private T castContent(T obj, String nodeContent) {
 		if(obj instanceof String) {
-			return (V) nodeContent;
+			return (T) nodeContent;
 		} else if (obj instanceof Integer) {
-			return (V) Integer.valueOf(nodeContent);
+			return (T) Integer.valueOf(nodeContent);
 		} 
-		return null;
+		throw new ParseException("Unexpected simple type ");
 	}
 
 	private String getTextContent(Node node) {

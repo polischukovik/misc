@@ -5,13 +5,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
-import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
 import com.polishchuk.ParseException;
+import com.polishchuk.anotation.DataFormatDateAdaptor;
 import com.polishchuk.anotation.DataFormatElement;
 
 public class DataFormatModel {
@@ -20,15 +20,17 @@ public class DataFormatModel {
 	public Type type; 
 	public List<DataFormatModel> components;
 	public boolean isInlineCollection;
+	public String datePattern;
 	
-	private DataFormatModel(String name, Type type, boolean isInlineCollection){
+	private DataFormatModel(String name, Type type, boolean isInlineCollection, String datePattern){
 		this.name = name;
 		this.type = type;
 		this.components = new ArrayList<>(); 
 		this.isInlineCollection = isInlineCollection;
+		this.datePattern = datePattern;
 	}
 	
-	private static List<Class<?>> simpleTypes = Arrays.asList(String.class, Integer.class, LocalDate.class);
+	private static List<Class<?>> simpleTypes = Arrays.asList(String.class, Integer.class);
 	
 	public static DataFormatModel from(TypeReference<?> typeReference) {
 		return from(null, typeReference, false);
@@ -36,30 +38,30 @@ public class DataFormatModel {
 	
 	private static DataFormatModel from(String name, TypeReference<?> typeRef, boolean isInlineCollection) throws ParseException {
 		Type type = typeRef.getType();
-		return DataFormatModel.from(name, type, isInlineCollection);
+		return DataFormatModel.from(name, type, isInlineCollection, null);
 	}
 	
-	private static DataFormatModel from(String name, Type type, boolean isInlineCollection) throws ParseException {
-		DataFormatModel node = new DataFormatModel(name, type, isInlineCollection);
+	private static DataFormatModel from(String name, Type type, boolean isInlineCollection, String datePattern) throws ParseException {
+		DataFormatModel node = new DataFormatModel(name, type, isInlineCollection, datePattern);
 		
-		if(type instanceof ParameterizedType) {
+		if (simpleTypes.contains(type)){
+			return node;
+		} else if(type instanceof ParameterizedType) {
 			ParameterizedType pt = (ParameterizedType) type;
 			
 			// Process collections
 			if (Collection.class.isAssignableFrom((Class<?>) pt.getRawType())) {
 				
-				
 				node.components.add(from(
 						"_items"
 						, pt.getActualTypeArguments()[0]
 						, false
+						, null
 						));
 				return node;
 			} else {
 				throw new ParseException("For parametrized types only Collections are allowed");
 			}
-		} else if (simpleTypes.contains(type)){
-			return node;
 		} else {
 			Method[] methods = ((Class<?>) type).getDeclaredMethods();
 			
@@ -71,12 +73,22 @@ public class DataFormatModel {
 		    				  getNameAnotationArgumentOrDefault(setter)
 							, getArgType(setter)
 							, getInlineCollectionAnotationArgument(setter)
+							, getDatePatternAnotationArgiment(setter)
 							));
 		    	}
 			}
 		}
 		
 		return node;
+	}
+
+	private static String getDatePatternAnotationArgiment(Method setter) {
+		DataFormatDateAdaptor[] anotation = setter.getAnnotationsByType(DataFormatDateAdaptor.class);
+		if(anotation.length != 0){
+			return anotation[0].value();
+		} else {
+			return "";
+		}
 	}
 
 	private static boolean getInlineCollectionAnotationArgument(Method setter) {
@@ -90,8 +102,8 @@ public class DataFormatModel {
 
 	private static String getNameAnotationArgumentOrDefault(Method setter) {
 		DataFormatElement[] anotation = setter.getAnnotationsByType(DataFormatElement.class);
-		if(anotation.length != 0 && !"".equals(anotation[0].name())){
-			return anotation[0].name();
+		if(anotation.length != 0 && !"".equals(anotation[0].value())){
+			return anotation[0].value();
 		} else {
 			return setter.getName().replaceFirst("set", "").toLowerCase();
 		}
@@ -157,8 +169,17 @@ public class DataFormatModel {
 		return name + "/" + type.getTypeName();
 	}
 
+	@SuppressWarnings("unchecked")
 	public <V> V createInstance() throws InstantiationException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
-		@SuppressWarnings("unchecked")
+		switch (this.type.getTypeName()) {
+			case "java.lang.String":
+				return (V) "";
+			case "java.lang.Integer":
+				return (V) Integer.valueOf(0);
+			default:
+				break;
+		}
+		
 		Constructor<V>[] ctors = (Constructor<V>[]) ((Class<?>) this.type).getDeclaredConstructors();
 		Constructor<V> ctor = null;
 		
@@ -172,6 +193,11 @@ public class DataFormatModel {
  	    V instance = ctor.newInstance();
 		
 		return instance;
+	}
+
+	public <V, R> void setValue(V instance, String setterName, DataFormatModel field, R value) throws NoSuchMethodException, SecurityException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
+		Method setter = instance.getClass().getMethod(setterName, value.getClass());
+		setter.invoke(instance, value);		
 	}
 	
 }

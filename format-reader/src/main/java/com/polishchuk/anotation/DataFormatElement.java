@@ -12,6 +12,5 @@ public @interface DataFormatElement {
 
 	boolean inlineCollection() default false;
 
-	String name() default "";
-
+	String value() default "";
 }

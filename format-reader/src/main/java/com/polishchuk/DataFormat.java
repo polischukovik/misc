@@ -13,11 +13,11 @@ import com.polishchuk.parser.XmlDataFormatParser;
 
 public class DataFormat<T> {
 	
-	private Parser<T> xmlDataFormatParser;
-	private Parser<T> binaryDataFormatParser;
+	private Parser xmlDataFormatParser;
+	private Parser binaryDataFormatParser;
 	
 	public DataFormat() throws ParserConfigurationException {
-		this.xmlDataFormatParser =  new XmlDataFormatParser<>();
+		this.xmlDataFormatParser =  new XmlDataFormatParser();
 //		this.binaryDataFormatParser = new BinaryDataFormatParser<>();
 	}
 
@@ -32,7 +32,7 @@ public class DataFormat<T> {
 	
 	public T parse(String path
 			, TypeReference<T> typeReference
-			, Parser<T> parser) throws ParserConfigurationException, SAXException, IOException, ParseException {
+			, Parser parser) throws ParserConfigurationException, SAXException, IOException, ParseException {
 		
         DataFormatModel model = DataFormatModel.from(typeReference);
         System.out.println(model.showModel());

@@ -2,27 +2,29 @@ package com.polishchuk.entity;
 
 import java.time.LocalDate;
 
+import com.polishchuk.anotation.DataFormatDateAdaptor;
 import com.polishchuk.anotation.DataFormatElement;
 
 public class Car {
-		private String barandName;
+		private String brandName;
 		private LocalDate date;
 		private Integer price;
 		
 		public String getBarandName() {
-			return barandName;
+			return brandName;
 		}
 		
-		@DataFormatElement
-		public void setBarandName(String barandName) {
-			this.barandName = barandName;
+		@DataFormatElement("BrandName")
+		public void setBrandName(String brandName) {
+			this.brandName = brandName;
 		}
 		
 		public LocalDate getDate() {
 			return date;
 		}
 		
-		@DataFormatElement
+		@DataFormatElement("Date")
+		@DataFormatDateAdaptor("dd.mm.yyyy")
 		public void setDate(LocalDate date) {
 			this.date = date;
 		}
@@ -31,13 +33,13 @@ public class Car {
 			return price;
 		}
 		
-		@DataFormatElement
+		@DataFormatElement("Price")
 		public void setPrice(Integer price) {
 			this.price = price;
 		}
 		
 		@Override
 		public String toString() {
-			return "Car [barandName=" + barandName + ", date=" + date + ", price=" + price + "]";
+			return "Car [brandName=" + brandName + ", date=" + date + ", price=" + price + "]";
 		}
 	}

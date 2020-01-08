@@ -16,5 +16,9 @@ public class ParseException extends RuntimeException {
 	public ParseException(Exception e) {
 		this.e = e;
 	}
-	
+
+	@Override
+	public String toString() {
+		return "ParseException [message=" + message + "]";
+	}
 }

@@ -9,8 +9,8 @@ import org.xml.sax.SAXException;
 import com.polishchuk.ParseException;
 import com.polishchuk.model.DataFormatModel;
 
-public interface Parser<T> {
+public interface Parser {
 	
-	public T parse(String path, DataFormatModel model) throws ParserConfigurationException, SAXException, IOException, ParseException;
+	public <T> T parse(String path, DataFormatModel model) throws ParserConfigurationException, SAXException, IOException, ParseException;
 
 }
